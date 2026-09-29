@@ -1,0 +1,13 @@
+{
+    "display_name": "Universal Immersion Engine",
+    "loading_order": 100,
+    "requires": [],
+    "optional": ["stable-diffusion", "tts"],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "UIE for SillyTavern (based on GetfroggyHoe's Universal Immersion Engine — Fugue)",
+    "version": "1.0.0",
+    "homePage": "https://github.com/pander0212/vps",
+    "auto_update": true,
+    "minimum_client_version": "1.12.0"
+}
