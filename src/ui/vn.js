@@ -11,8 +11,14 @@ function mark() {
     if (!on) return;
     try {
         document.querySelectorAll('#chat .mes.uie-vn-last').forEach(n => n.classList.remove('uie-vn-last'));
-        const msgs = document.querySelectorAll('#chat .mes[is_user="false"]:not([is_system="true"])');
-        const last = msgs[msgs.length - 1];
+        // Last real character message (skip user, system and narrator notes).
+        const chat = st.chat();
+        let idx = -1;
+        for (let i = chat.length - 1; i >= 0; i--) {
+            const m = chat[i];
+            if (!m.is_user && !m.is_system && m.extra?.type !== 'narrator') { idx = i; break; }
+        }
+        const last = idx >= 0 ? document.querySelector(`#chat .mes[mesid="${idx}"]`) : null;
         if (last) {
             last.classList.add('uie-vn-last');
             if (!last.querySelector('.uie-vn-next')) {

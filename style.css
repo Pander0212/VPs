@@ -589,7 +589,9 @@ html[data-uie-theme="parchment"] .uie-deck-section h3 { color: var(--accent); }
    New game wizard
    ========================================================================== */
 .uie-wizard-list { display: grid; gap: 8px; }
-.uie-wizard-row { display: flex; gap: 8px; align-items: center; padding: 10px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); }
+.uie-wizard-row { display: flex; gap: 8px; align-items: center; padding: 10px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); flex-wrap: wrap; }
+.uie-wizard-row .uie-grow { flex: 1 1 150px; }
+.uie-wizard-row .uie-bar { width: min(120px, 32vw) !important; }
 .uie-wizard-row .uie-grow b { display: block; }
 
 /* ==========================================================================

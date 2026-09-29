@@ -27,6 +27,11 @@ function commit(idx, msg, rawOps, source) {
     record(state, { key, idx, ops: res.applied, patches: res.patches, changes: res.changes, full: fullHash(msg) });
     save('ops');
     notifyChanges(res.changes);
+    if (ops.some(o => o.op === 'battle.start') && state.battle?.active) {
+        globalThis.toastr?.warning?.('A battle has started! Tap here to fight.', 'UIE', {
+            timeOut: 12000, onclick: () => import('../ui/panels.js').then(m => m.openPanel('battle')),
+        });
+    }
     return res;
 }
 

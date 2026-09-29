@@ -8,7 +8,7 @@ import { hash, uid } from './util.js';
 import { undoPatches } from './tx.js';
 import { applyOps } from './ops.js';
 
-export const LOG_CAP = 300;
+export const LOG_CAP = 200;
 export const STASH_CAP = 80;
 
 const TAG_RE = /<uie>[\s\S]*?<\/uie>/gi;

@@ -27,7 +27,14 @@ export function refreshInjection() {
         const set = settingsGet();
         if (!enabled() || isEphemeral()) { st.clearPrompts(); return; }
         if (set.injectEnabled) {
-            const text = compileContext(S(), { budget: set.injectBudget, recentText: recentMessages(2), userName: st.userName() });
+            let text = compileContext(S(), { budget: set.injectBudget, recentText: recentMessages(2), userName: st.userName() });
+            // Per-character data stored on the ST card (Characters panel).
+            const card = st.readCharField('uie');
+            if (card && (card.chatRules || card.drives)) {
+                const who = st.charName();
+                if (card.drives) text += `\n${who}'s drives: ${String(card.drives).slice(0, 400)}`;
+                if (card.chatRules) text += `\n[Rules for ${who}] ${String(card.chatRules).slice(0, 800)}`;
+            }
             st.injectPrompt(text, { position: set.injectPosition, depth: set.injectDepth, role: set.injectRole });
         } else {
             st.injectPrompt('', {});
@@ -82,7 +89,8 @@ async function onMessageReceived(idx, type) {
         await handleInline(idx, { apply: true });
     } else {
         await handleInline(idx, { apply: false }); // never leak stray tags
-        if (set.trackerMode === 'pass') await runPass(idx);
+        // "Continue" appends to the same message: re-track the whole message.
+        if (set.trackerMode === 'pass') await runPass(idx, { force: type === 'continue' });
     }
     refreshInjection();
 }

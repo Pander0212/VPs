@@ -69,6 +69,8 @@ export function openSheet(o) {
         bringToFront() { root.appendChild(node); const i = stack.indexOf(api); stack.splice(i, 1); stack.push(api); },
     };
     cleanups.push(delegate(node.querySelector('.uie-sheet-head'), { close: () => api.close() }));
+    // Forms inside sheets never navigate (a stray submit would reload SillyTavern).
+    node.addEventListener('submit', (e) => { if (!e.defaultPrevented) e.preventDefault(); });
     node.querySelector('.uie-sheet-backdrop').addEventListener('click', () => { if (o.size === 'half' || o.size === 'wide') api.close(); });
     stack.push(api);
     document.documentElement.classList.add('uie-sheet-open');

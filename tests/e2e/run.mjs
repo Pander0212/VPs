@@ -37,6 +37,7 @@ function check(name, ok, detail = '') {
 }
 
 async function shot(page, name) {
+    await page.waitForTimeout(260); // sheet open animation
     await page.screenshot({ path: path.join(OUT, `${current}-${name}.png`) });
 }
 
@@ -46,7 +47,10 @@ async function boot(page) {
         await page.locator('.popup .onboarding').first().waitFor({ timeout: 6000 });
         await page.locator('.popup-button-ok').first().click();
     } catch { /* not first run */ }
-    await page.waitForFunction(() => !!globalThis.UIE && !!document.querySelector('#uie-launcher'), null, { timeout: 60000 });
+    await page.waitForFunction(() => !!globalThis.UIE, null, { timeout: 60000 });
+    // A previous run may have left UIE disabled in the saved settings.
+    await page.evaluate(() => { if (!UIE.state.settingsGet().enabled) UIE.setEnabled(true); });
+    await page.waitForSelector('#uie-launcher', { timeout: 20000 });
 }
 
 async function installMocks(page) {
@@ -449,6 +453,7 @@ async function run(vpName) {
         await diaryFlow(page);
         await battleFlow(page);
         await helperFlow(page);
+        await tier3Flows(page);
 
         // ---------------------------------------------------------- chat isolation
         const firstChat = await page.evaluate(() => SillyTavern.getContext().getCurrentChatId());
@@ -498,6 +503,7 @@ async function run(vpName) {
         check('toggle on restores UI', true);
         await layoutChecks(page, 'after re-enable');
         await page.evaluate(() => { UIE.state.settingsGet().hud.expanded = false; });
+        await page.waitForTimeout(1500); // let ST's debounced settings save flush
 
         check('no console errors during the whole run', errors.length === 0, errors.slice(0, 5).join(' | '));
     } catch (e) {
@@ -559,6 +565,115 @@ async function helperFlow(page) {
     const chatLen2 = await page.evaluate(() => SillyTavern.getContext().chat.length);
     check('helper pet: proposes ops, applies only after confirm, never posts to chat', !before && after && chatLen === chatLen2, JSON.stringify({ before, after, chatLen, chatLen2 }));
     await shot(page, '22-helper');
+    await closeSheets(page);
+}
+
+async function tier3Flows(page) {
+    // Activities
+    await page.evaluate(() => UIE.openPanel('activities'));
+    await page.waitForSelector('[data-act-id="sleep"]');
+    const a0 = await S(page, s => ({ t: s.clock.t, e: s.trackers.energy.value }));
+    await page.click('[data-act-id="sleep"]');
+    await page.waitForTimeout(300);
+    const a1 = await S(page, s => ({ t: s.clock.t, e: s.trackers.energy.value }));
+    check('activities: sleep advances 8h and restores energy', a1.t - a0.t === 480 && a1.e > a0.e, JSON.stringify({ a0, a1 }));
+    await shot(page, '23-activities');
+    await closeSheets(page);
+
+    // Persona lineage
+    await page.evaluate(() => UIE.openPanel('persona'));
+    await page.waitForSelector('[data-sheet="persona"]');
+    await page.click('[data-sheet="persona"] [data-tab="lineage"]');
+    const kin0 = await page.locator('.uie-kin', { hasText: 'Marta' }).count();
+    await page.click('[data-p="addkin"]');
+    await page.waitForSelector('.uie-dialog input[name=name]');
+    await page.fill('.uie-dialog input[name=name]', 'Marta');
+    await page.selectOption('.uie-dialog select[name=rel]', 'Grandparent');
+    await page.locator('.uie-dialog button[type=submit]').click();
+    await page.waitForTimeout(300);
+    check('persona: lineage member added to the family tree', await page.locator('.uie-kin', { hasText: 'Marta' }).count() === kin0 + 1);
+    // clean up (persona data is global, not per chat)
+    await page.locator('.uie-kin', { hasText: 'Marta' }).last().locator('[data-rmkin]').click();
+    await sheetFits(page, 'persona lineage');
+    await shot(page, '24-persona-lineage');
+    await closeSheets(page);
+
+    // Social
+    await page.evaluate(() => UIE.openPanel('social'));
+    await page.waitForTimeout(300);
+    check('social: relationship meters render', await page.locator('[data-sheet="social"] .uie-meter').count() >= 3);
+    await shot(page, '25-social');
+    await closeSheets(page);
+
+    // Phone
+    const npcId = await S(page, s => Object.keys(s.npcs)[0]);
+    if (npcId) {
+        const chatLen = await page.evaluate(() => SillyTavern.getContext().chat.length);
+        await page.evaluate((id) => UIE.openPanel('phone', { npc: id }), npcId);
+        await page.waitForSelector('[data-sheet="phone"] [name=t]');
+        await mock(page, 'hey! yeah I\'m at the studio\nwanna come by?');
+        await page.fill('[data-sheet="phone"] [name=t]', 'Where are you?');
+        await page.click('[data-sheet="phone"] .uie-send');
+        await page.waitForTimeout(500);
+        const th = await page.evaluate((id) => UIE.state.S().phone.threads[id]?.length, npcId);
+        const chatLen2 = await page.evaluate(() => SillyTavern.getContext().chat.length);
+        check('phone: in-character texts stored per NPC, main chat untouched', th === 3 && chatLen === chatLen2, JSON.stringify({ th, chatLen, chatLen2 }));
+        await sheetFits(page, 'phone thread');
+        await shot(page, '26-phone');
+        await closeSheets(page);
+    }
+
+    // Party
+    await page.evaluate(() => UIE.openPanel('party'));
+    await page.waitForSelector('[data-sheet="party"]');
+    await shot(page, '27-party');
+    await closeSheets(page);
+
+    // Characters
+    await page.evaluate(() => UIE.openPanel('characters'));
+    await page.waitForSelector('[data-sheet="characters"]');
+    if (await page.locator('[data-cform] [name=chatRules]').count()) {
+        await page.fill('[data-cform] [name=chatRules]', 'Speaks softly.');
+        await page.click('[data-c="save"]');
+        await page.waitForTimeout(800);
+        const saved = await page.evaluate(() => SillyTavern.getContext().characters[SillyTavern.getContext().characterId]?.data?.extensions?.uie?.chatRules);
+        check('characters: UIE fields written to the ST card', saved === 'Speaks softly.', String(saved));
+        const inj = await page.evaluate(() => SillyTavern.getContext().extensionPrompts.uie_state?.value || '');
+        check('characters: chat rules injected while chatting', inj.includes('Speaks softly.'));
+    }
+    await shot(page, '28-characters');
+    await closeSheets(page);
+
+    // New game (AI fill + start)
+    await page.evaluate(() => UIE.openPanel('newgame'));
+    await page.waitForSelector('[data-sheet="newgame"]');
+    await page.fill('[data-sheet="newgame"] [data-k="name"]', 'Irina');
+    await mock(page, '{"cls":"Paladin","startLocation":{"name":"Adventurer\'s Path","kind":"road","desc":"A winding dirt road."},"items":[{"name":"Practice Hoodie","qty":1,"cat":"clothing"}],"quests":[{"title":"Find the band","desc":"They need a singer."}],"npcs":[{"name":"Bastian Rivers","role":"Guitarist"}],"opening":""}');
+    await page.click('[data-ng="fill"]');
+    await page.waitForTimeout(600);
+    await shot(page, '29-newgame');
+    await page.click('[data-ng="start"]');
+    await page.waitForTimeout(300);
+    if (await page.locator('.uie-dialog').count()) await page.locator('.uie-dialog button[type=submit]').click();
+    await page.waitForTimeout(500);
+    const ng = await S(page, s => ({ name: s.player.name, here: s.map.nodes[s.map.location].name, items: Object.values(s.inventory).map(i => i.name), npcs: Object.values(s.npcs).map(n => n.name), done: s.newGameDone, diary: s.diary.entries.length }));
+    check('new game: seeds the campaign (name, location, items, NPCs), keeps diary', ng.name === 'Irina' && ng.here === 'Adventurer\'s Path' && ng.items.includes('Practice Hoodie') && ng.npcs.includes('Bastian Rivers') && ng.done && ng.diary >= 1, JSON.stringify(ng));
+    await closeSheets(page);
+
+    // VN stage mode
+    await page.evaluate(() => { UIE.state.settingsGet().vnMode = true; UIE.state.saveSettings(); });
+    await page.waitForTimeout(400);
+    check('VN mode styles the last AI message', await page.locator('#chat .mes.uie-vn-last').count() === 1);
+    await shot(page, '30-vn');
+    await page.evaluate(() => { UIE.state.settingsGet().vnMode = false; UIE.state.saveSettings(); });
+    await page.waitForTimeout(200);
+    check('VN mode off cleans up', await page.locator('.uie-vn-last, .uie-vn-next').count() === 0);
+
+    // Atmosphere follows weather
+    await page.evaluate(() => UIE.openPanel('atmosphere'));
+    await page.click('[data-w="rain"]');
+    await page.waitForTimeout(200);
+    check('atmosphere: overlay follows the weather', await page.evaluate(() => document.querySelector('#uie-atmo')?.dataset.kind === 'rain'));
     await closeSheets(page);
 }
 
