@@ -79,7 +79,7 @@ export async function runPass(idx, { force = false } = {}) {
             raw = await genText(prompt, { responseLength: 500, label: 'Tracker pass' });
         } catch (e) {
             st.warn('tracker pass failed', e);
-            globalThis.toastr?.warning?.(`Tracker pass failed: ${e?.message || e}`, 'UIE', { timeOut: 3500 });
+            globalThis.toastr?.warning?.(`Tracker pass failed: ${String(e?.message || e).replace(/[<>&"']/g, '')}`, 'UIE', { timeOut: 3500 });
             return null;
         }
         let ops = extractOps(raw);

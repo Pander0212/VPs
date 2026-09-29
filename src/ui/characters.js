@@ -69,7 +69,7 @@ export function open() {
                     try { st.setTtsVoice(c.name, payload.voice); } catch (err) { st.warn('tts voice not applied', err); }
                 }
                 refreshInjection();
-                globalThis.toastr?.success?.(`Saved to ${c.name}'s card.`, 'UIE');
+                globalThis.toastr?.success?.(`Saved to ${esc(c.name)}'s card.`, 'UIE');
             }
             if (a === 'npc') {
                 const ex = findByName(Object.values(S().npcs), c.name, 0.9);

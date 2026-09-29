@@ -187,7 +187,7 @@ async function importFromCard() {
     const extra = c.data?.extensions?.uie || {};
     if (ex) {
         mutate(s => { const n = s.npcs[ex.id]; n.card = c.name; if (!n.appearance) n.appearance = desc.slice(0, 600); if (!n.personality) n.personality = pers.slice(0, 600); });
-        globalThis.toastr?.success?.(`Linked ${ex.name} to the card ${c.name}.`, 'UIE');
+        globalThis.toastr?.success?.(`Linked ${esc(ex.name)} to the card ${esc(c.name)}.`, 'UIE');
         return;
     }
     mutate(s => {
@@ -198,7 +198,7 @@ async function importFromCard() {
             rel: { affection: 30, trust: 30, standing: 50, memories: [] }, met: s.clock.t,
         };
     });
-    globalThis.toastr?.success?.(`Imported ${c.name}.`, 'UIE');
+    globalThis.toastr?.success?.(`Imported ${esc(c.name)}.`, 'UIE');
 }
 
 async function aiGenerate() {
