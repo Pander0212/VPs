@@ -77,6 +77,13 @@ function addWandEntry() {
     menu.appendChild(item);
 }
 
+// Small debug/automation handle (used by the e2e tests; handy for power users in the console).
+function exposeDebug() {
+    import('./src/state.js').then((state) => import('./src/ai/tracker.js').then((tracker) => import('./src/ui/panels.js').then((panels) => {
+        globalThis.UIE = Object.freeze({ st, state, tracker, openPanel: panels.openPanel, openDeck, setEnabled, version: '1.0.0' });
+    }))).catch(() => { /* ignore */ });
+}
+
 async function boot() {
     if (booted) return;
     booted = true;
@@ -96,6 +103,7 @@ async function boot() {
             s.vnMode ? mountVn() : unmountVn();
         });
         syncEnabled();
+        exposeDebug();
         st.log('ready');
     } catch (e) {
         console.error(LOG, 'boot failed', e);

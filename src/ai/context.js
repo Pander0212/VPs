@@ -116,7 +116,7 @@ export function compileContext(state, opts = {}) {
     }
 
     // P3 — databank facts by relevance
-    const facts = Object.values(state.databank).map(f => ({ f, s: relevance(`${f.title} ${f.text} ${(f.tags || []).join(' ')}`, kw) }))
+    const facts = Object.values(state.databank).map(f => ({ f, s: relevance(`${f.title} ${f.text} ${(f.tags || []).join(' ')}`, kw) + (f.pinned ? 100 : 0) }))
         .sort((a, b) => b.s - a.s || num(b.f.t) - num(a.f.t));
     const factLines = [];
     for (const { f, s } of facts) {

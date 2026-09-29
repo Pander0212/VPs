@@ -27,7 +27,18 @@ export function settingsGet() { return settings; }
 export function isEphemeral() { return ephemeral; }
 export function boundChatId() { return boundChat; }
 
+let tapHookInstalled = false;
+function installTapFlush() {
+    if (tapHookInstalled || typeof document === 'undefined') return;
+    tapHookInstalled = true;
+    document.addEventListener('pointerdown', (e) => st.flushOnTap(e), true);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Enter') st.flushOnTap(e); }, true);
+    window.addEventListener('pagehide', () => st.flushMeta());
+    document.addEventListener('visibilitychange', () => { if (document.hidden) st.flushMeta(); });
+}
+
 export function loadSettings() {
+    installTapFlush();
     const root = st.settingsRoot();
     settings = migrateSettings(root);
     st.setSettings(settings);
@@ -97,11 +108,14 @@ export function userOps(rawOps, { toast = true } = {}) {
     return res;
 }
 
+let lastToast = null;
 export function notifyChanges(changes, title = 'UIE') {
     if (!settings.showChangeToasts || !changes?.length) return;
     const line = changeLine(changes);
     try {
-        globalThis.toastr?.info?.(escapeText(line), title, { timeOut: 4500, closeButton: true, preventDuplicates: false, toastClass: 'toast uie-toast' });
+        // One UIE toast at a time: a new change list replaces the previous one.
+        if (lastToast) globalThis.toastr?.clear?.(lastToast);
+        lastToast = globalThis.toastr?.info?.(escapeText(line), title, { timeOut: 4500, closeButton: true, preventDuplicates: false, toastClass: 'toast uie-toast' });
     } catch { /* ignore */ }
 }
 

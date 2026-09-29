@@ -103,7 +103,8 @@ export function defaultEffects(cat, name = '') {
         case 'food': return { hunger: 25, energy: 3 };
         case 'drink':
             if (/potion|elixir|tonic/.test(n)) return { hp: 25 };
-            if (/coffee|tea|energy/.test(n)) return { energy: 12, hunger: 3 };
+            if (/coffee|espresso|energy/.test(n)) return { energy: 12, hunger: 2 };
+            if (/\btea\b/.test(n)) return { hunger: 8, energy: 6 };
             if (/ale|beer|wine/.test(n)) return { hunger: 5, energy: -3 };
             return { hunger: 8, energy: 2 };
         default: return {};

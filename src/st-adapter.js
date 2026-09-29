@@ -15,6 +15,9 @@ function ctx() {
 }
 
 const PROMPT_KEY = 'uie_state';
+let metaDirty = false;
+let metaChat = null;
+let metaTimer = null;
 const INLINE_KEY = 'uie_inline';
 
 export const st = {
@@ -55,12 +58,34 @@ export const st = {
         try { return c?.getCurrentChatId?.() ?? c?.chatId ?? null; } catch { return c?.chatId ?? null; }
     },
     meta() { return ctx()?.chatMetadata ?? null; },
+    /**
+     * Save chat metadata soon. ST's own saveMetadataDebounced() is cancelled by clearChat() when
+     * the user switches chats, which silently drops the last edit. We use a short debounce with
+     * an immediate save instead, and flush on the next tap anywhere outside UIE (see flushOnTap).
+     */
     saveMeta() {
+        metaDirty = true;
+        metaChat = st.chatId();
+        clearTimeout(metaTimer);
+        metaTimer = setTimeout(() => st.flushMeta(), 400);
+    },
+    flushMeta() {
+        clearTimeout(metaTimer);
+        if (!metaDirty) return;
+        metaDirty = false;
+        if (st.chatId() !== metaChat) { st.warn('chat changed before save; skipped'); return; }
         const c = ctx();
         try {
-            if (c?.saveMetadataDebounced) c.saveMetadataDebounced();
-            else c?.saveMetadata?.();
+            const r = c?.saveMetadata ? c.saveMetadata() : c?.saveMetadataDebounced?.();
+            if (r?.catch) r.catch(e => st.error('saveMetadata failed', e));
         } catch (e) { st.error('saveMetadata failed', e); }
+    },
+    /** Capture-phase listener: any tap on ST's own UI flushes pending UIE saves first. */
+    flushOnTap(e) {
+        if (!metaDirty) return;
+        const t = e.target;
+        if (t?.closest?.('.uie-scope, .uie-sheet, .uie-dialog, #uie-overlay')) return;
+        st.flushMeta();
     },
     async saveMetaNow() {
         try { await ctx()?.saveMetadata?.(); } catch (e) { st.error('saveMetadata failed', e); }

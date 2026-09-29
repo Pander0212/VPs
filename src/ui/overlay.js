@@ -53,6 +53,9 @@ export function mountOverlay() {
         }
     });
 
+    hud.addEventListener('keydown', (e) => {
+        if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-hud-toggle]')) { e.preventDefault(); e.target.click(); }
+    });
     offs.push(bus.on(() => renderHud()));
     offs.push(onQueueChange((n) => {
         const b = root?.querySelector('.uie-launcher-busy');
@@ -138,9 +141,9 @@ function renderHud() {
     const chips = [];
     if (it.time) chips.push(`<span class="uie-chip" title="${esc(formatDate(p, 'long', s.calendar.monthNames))}">${icon('fa-clock')} ${esc(formatTime(p, s.calendar.h24))}<small class="uie-hide-xs"> ${esc(formatDate(p, 'dmy').slice(0, 5))}</small></span>`);
     if (it.weather) chips.push(`<span class="uie-chip" title="${esc(s.weather.kind)}">${weatherIcon(s.weather.kind)}<small class="uie-hide-xs"> ${esc(s.weather.kind)}</small></span>`);
-    if (it.location) chips.push(`<span class="uie-chip uie-chip-loc" data-open="map">${icon('fa-location-dot')} <span>${esc(here?.name || '—')}</span></span>`);
+    if (it.location) chips.push(`<span class="uie-chip uie-chip-loc">${icon('fa-location-dot')} <span>${esc(here?.name || '—')}</span></span>`);
     if (it.hp && hp) chips.push(`<span class="uie-chip uie-chip-hp">${icon('fa-heart')} ${bar(hp.value, hp.max, hp.color, { small: true, label: 'HP' })}</span>`);
-    if (it.currency) chips.push(`<span class="uie-chip" data-open="inventory">${esc(s.player.currencySymbol || '🪙')} ${esc(s.player.currency)}</span>`);
+    if (it.currency) chips.push(`<span class="uie-chip">${esc(s.player.currencySymbol || '🪙')} ${esc(s.player.currency)}</span>`);
     if (it.status && (statuses.length || warn.length)) chips.push(`<span class="uie-chip uie-chip-warn" title="${esc(statuses.map(x => x.name).concat(warn.map(t => `${t.label} low`)).join(', '))}">${icon('fa-triangle-exclamation')} ${statuses.length + warn.length}</span>`);
 
     const bars = Object.entries(s.player.bars).filter(([id, b]) => b.visible !== false && it[id] !== false)
@@ -157,6 +160,12 @@ function renderHud() {
             <div class="uie-hud-line">${icon('fa-calendar')} ${esc(formatDate(p, 'long', s.calendar.monthNames))} · ${esc(partOfDay(p.hh))} · ${esc(s.weather.kind)}${s.weather.temp !== undefined ? ` ${esc(s.weather.temp)}°` : ''}</div>
             ${it.status ? `<div class="uie-hud-line">${icon('fa-shield-heart')} ${statuses.length ? statuses.map(x => `<span class="uie-tag">${esc(x.name)}</span>`).join(' ') : '<span class="uie-muted">Status: Clear</span>'}</div>` : ''}
             <div class="uie-hud-grid">${bars}${trackers}</div>
+            <div class="uie-hud-links">
+                <button class="uie-pill" data-open="map">${icon('fa-map-location-dot')} Map</button>
+                <button class="uie-pill" data-open="inventory">${icon('fa-bag-shopping')} ${esc(s.player.currencySymbol || '🪙')} ${esc(s.player.currency)}</button>
+                <button class="uie-pill" data-open="journal">${icon('fa-scroll')} Quests</button>
+                <button class="uie-pill" data-open="activities">${icon('fa-person-running')} Activities</button>
+            </div>
             <div class="uie-hud-line uie-muted">Lv ${esc(s.player.level)} ${esc(s.player.name || '')} · tap the bar to collapse</div>
         </div>` : ''}`;
     placeLauncher();
