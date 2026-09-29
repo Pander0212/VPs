@@ -28,13 +28,15 @@ You need SillyTavern **1.12 or newer** (tested on 1.19).
    ```
    uie
    ```
-5. Tap **Install**, wait for the "installed" message, then **reload the page**.
-6. A round compass button appears above the send bar. Tap it. 🎉
+5. Tap **Install just for me** (or **Install**), then confirm **Yes, install it**.
+6. Wait for the "installed successfully" message, then **reload the page**.
+7. A round compass button appears above the send bar. Tap it. 🎉
 
 No other steps are needed. Updates install automatically when SillyTavern checks for
 extension updates (or tap *Manage extensions → Update*).
 
-> If the branch is later merged into `main`, step 4 can be left empty.
+> If the branch is later merged into `main`, step 4 can be left empty. The extension folder will
+> be called `VPs` — that's fine, nothing depends on the folder name.
 
 ## First steps
 

@@ -4,7 +4,7 @@
 //
 // Usage:
 //   ST_URL=http://127.0.0.1:8000/ PW_DIR=/path/with/node_modules/playwright node tests/e2e/run.mjs
-// Env: VIEWPORTS=iphone,android,landscape,desktop  OUT=tests/e2e/out  QUICK=1 (skip slow timeout test)
+// Env: VIEWPORTS=iphone,android,landscape,desktop  OUT=tests/e2e/out
 
 import { createRequire } from 'node:module';
 import path from 'node:path';
